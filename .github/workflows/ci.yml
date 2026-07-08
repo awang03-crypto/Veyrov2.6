@@ -1,0 +1,67 @@
+name: Veyro CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check
+        run: npm run check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Backend tests (Node built-in runner)
+        run: npm test
+
+      - name: Backend coverage check
+        run: npm run coverage
+
+      - name: React component tests (Vitest)
+        run: npm run test:react
+
+      - name: React coverage report
+        run: npm run test:react:coverage
+
+      - name: Build React app
+        run: npm run build
+
+      - name: Secret scan
+        run: npm run secret-scan
+
+      - name: Dependency audit
+        run: npm run audit
+
+      - name: Write CI summary
+        if: always()
+        run: |
+          {
+            echo "## Veyro CI"
+            echo "- Syntax check: completed"
+            echo "- Lint: completed"
+            echo "- Backend tests: completed"
+            echo "- Backend coverage: completed"
+            echo "- React component tests: completed"
+            echo "- React coverage: completed"
+            echo "- Build: completed"
+            echo "- Secret scan: completed"
+            echo "- Dependency audit: completed"
+          } >> "$GITHUB_STEP_SUMMARY"

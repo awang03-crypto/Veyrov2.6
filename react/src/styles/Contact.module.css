@@ -1,0 +1,15 @@
+.contactPage { max-width: 980px; margin: 0 auto; }
+.hero, .contactPanel { background: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.72); box-shadow: 0 24px 60px rgba(24,48,36,0.12); backdrop-filter: blur(10px); }
+.hero { border-radius: 34px; padding: 24px; margin-bottom: 18px; }
+.eyebrow { display: inline-flex; padding: 5px 10px; border-radius: 999px; background: rgba(24,63,47,0.08); color: var(--green-1); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.h1 { margin: 12px 0 8px; font-family: var(--display); font-size: clamp(1.8rem,4vw,3.2rem); line-height: 1; letter-spacing: 0; color: var(--green-1); }
+.p { margin: 0; color: var(--muted); line-height: 1.6; font-size: 0.96rem; }
+.contactPanel { border-radius: 28px; padding: 22px; display: grid; gap: 14px; }
+.label { display: grid; gap: 7px; color: var(--green-1); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.input, .textarea { width: 100%; border: 1px solid var(--line); border-radius: 18px; padding: 13px 15px; background: rgba(255,255,255,0.95); color: var(--ink); font-size: 0.95rem; outline: none; }
+.textarea { min-height: 150px; resize: vertical; }
+.input:focus, .textarea:focus { border-color: var(--green-2); box-shadow: 0 0 0 4px rgba(45,102,76,0.12); }
+.button { width: fit-content; border: none; border-radius: 999px; padding: 12px 18px; background: linear-gradient(135deg,var(--green-1),var(--green-2)); color: white; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+.button:disabled { cursor: not-allowed; opacity: 0.65; }
+.status { color: var(--muted); font-size: 0.84rem; }
+@media (max-width: 680px) { .hero, .contactPanel { border-radius: 22px; padding: 16px; } .input, .textarea { min-height: 45px; font-size: 1rem; } .textarea { min-height: 130px; } .button { width: 100%; min-height: 45px; } }

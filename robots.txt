@@ -1,0 +1,30 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin.html
+Disallow: /basketball.html
+Disallow: /basketball-vault.html
+Disallow: /basketball-graph.html
+Disallow: /basketball-analysis.html
+Disallow: /basketball-compare.html
+Disallow: /basketball-profile.html
+Disallow: /basketball-team.html
+Disallow: /basketball-coach.html
+Disallow: /basketball-recruiting.html
+Disallow: /basketball-video.html
+Disallow: /profile.html
+Disallow: /team.html
+Disallow: /coach.html
+Disallow: /recruiting.html
+Disallow: /analysis.html
+Disallow: /compare.html
+Disallow: /graph.html
+Disallow: /nextpage.html
+Disallow: /video.html
+Disallow: /api/
+Disallow: /data/
+Disallow: /uploads/
+Disallow: /node_modules/
+Disallow: /__pycache__/
+
+Sitemap: https://darksalmon-lark-983637.hostingersite.com/sitemap.xml

@@ -1,0 +1,128 @@
+:root {
+    --bg: #eef4ef;
+    --bg-accent: #dbe8dc;
+    --panel: rgba(255, 255, 255, 0.88);
+    --panel-strong: #ffffff;
+    --ink: #163127;
+    --muted: #61796b;
+    --line: rgba(22, 49, 39, 0.09);
+    --green-1: #183f2f;
+    --green-2: #2f6b4f;
+    --green-3: #6eb37e;
+    --gold-1: #d7a544;
+    --gold-2: #f4de9d;
+    --shadow: 0 24px 60px rgba(24, 48, 36, 0.12);
+    --radius-xl: 34px;
+    --radius-lg: 24px;
+    --radius-md: 18px;
+    --display: Georgia, "Times New Roman", serif;
+    --ui: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: var(--ui);
+}
+
+html {
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--ink);
+    overflow-x: hidden;
+    text-rendering: optimizeLegibility;
+    background-attachment: fixed;
+    background:
+        radial-gradient(circle at top left, rgba(110, 179, 126, 0.22), transparent 28%),
+        radial-gradient(circle at top right, rgba(215, 165, 68, 0.18), transparent 26%),
+        linear-gradient(180deg, #f8fbf7 0%, var(--bg) 42%, #e7efe8 100%);
+    padding: 28px 18px 36px;
+}
+
+body::selection {
+    background: rgba(215, 165, 68, 0.3);
+}
+
+a,
+button {
+    -webkit-tap-highlight-color: rgba(24, 63, 47, 0.12);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid rgba(215, 165, 68, 0.7) !important;
+    outline-offset: 3px !important;
+}
+
+.container,
+.page,
+main {
+    isolation: isolate;
+}
+
+.container,
+.page {
+    padding-top: 42px;
+}
+
+.route-loading {
+    min-height: calc(100vh - 84px);
+    display: grid;
+    place-items: center;
+    padding: 42px 18px;
+}
+
+.route-loading-card {
+    width: min(360px, 100%);
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    padding: 24px;
+    border: 1px solid rgba(22, 49, 39, 0.1);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+.route-loading-card span {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--green-1), var(--gold-1));
+    font-weight: 900;
+}
+
+.route-loading-card strong {
+    color: var(--green-1);
+    font-size: 1rem;
+}
+
+.route-loading-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.86rem;
+}
+
+/* Legacy mode CSS removed — system retired */
+
+@media (max-width: 700px) {
+    body {
+        padding-bottom: calc(132px + env(safe-area-inset-bottom));
+    }
+
+    .container,
+    .page {
+        padding-top: 54px;
+    }
+}

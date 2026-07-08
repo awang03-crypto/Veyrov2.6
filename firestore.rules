@@ -1,0 +1,613 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.email == "awang03@dccs.org"; // To change admin: update VITE_ADMIN_EMAIL in .env and redeploy
+    }
+
+    function isCoachForTeam(teamId) {
+      return signedIn()
+        && teamId is string
+        && teamId.size() > 0
+        && exists(/databases/$(database)/documents/teams/$(teamId))
+        && get(/databases/$(database)/documents/teams/$(teamId)).data.coachId == request.auth.uid;
+    }
+
+    function isMemberOfTeam(teamId) {
+      return signedIn()
+        && teamId is string
+        && teamId.size() > 0
+        && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid))
+        && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.teamId == teamId;
+    }
+
+    function teamExists(teamId) {
+      return teamId is string
+        && teamId.size() > 0
+        && exists(/databases/$(database)/documents/teams/$(teamId));
+    }
+
+    function teamData(teamId) {
+      return get(/databases/$(database)/documents/teams/$(teamId)).data;
+    }
+
+    function validPosition(position) {
+      return position in ['gk', 'def', 'mid', 'att'];
+    }
+
+    function validPlanTier(tier) {
+      return tier in ['free', 'coach', 'premium'];
+    }
+
+    function validPlanStatus(status) {
+      return status in ['active', 'trialing', 'past_due', 'canceled'];
+    }
+
+    function validTimestamp(value) {
+      return value is number
+        && value > 0
+        && value <= request.time.toMillis() + 300000;
+    }
+
+    function validRecentTimestamp(value) {
+      return value is number
+        && value > 0
+        && value <= request.time.toMillis() + 60000
+        && value >= request.time.toMillis() - 60000;
+    }
+
+    function validOptionalTimestamp(data, key) {
+      return !(key in data) || data[key] == null || validTimestamp(data[key]);
+    }
+
+    function validOptionalAge(age) {
+      return age == null || (
+        age is number
+        && age >= 5
+        && age <= 80
+      );
+    }
+
+    function validRatingData(data) {
+      return data.keys().hasOnly([
+          'userId',
+          'userEmail',
+          'date',
+          'player',
+          'opponent',
+          'matchResult',
+          'teamScore',
+          'opponentScore',
+          'minutesPlayed',
+          'position',
+          'teamId',
+          'teamCode',
+          'teamName',
+          'finalRating',
+          'rawStats',
+          'decisiveNet',
+          'decisiveBonus',
+          'statInputs',
+          'decisiveInputs',
+          'calculatorInputsEdited',
+          'updatedAt',
+          'timestamp'
+        ])
+        && data.player is string
+        && data.player.size() > 0
+        && data.player.size() <= 120
+        && data.opponent is string
+        && data.opponent.size() > 0
+        && data.opponent.size() <= 120
+        && data.date is string
+        && data.date.size() <= 20
+        && data.matchResult in ['', 'win', 'draw', 'loss']
+        && (data.teamScore == null || data.teamScore is number)
+        && (data.opponentScore == null || data.opponentScore is number)
+        && data.minutesPlayed is number
+        && data.minutesPlayed >= 1
+        && data.minutesPlayed <= 130
+        && validPosition(data.position)
+        && data.finalRating is number
+        && data.finalRating >= 0
+        && data.finalRating <= 100
+        && data.rawStats is number
+        && data.decisiveNet is number
+        && data.decisiveBonus is number
+        && data.statInputs is map
+        && data.decisiveInputs is map
+        && (!('calculatorInputsEdited' in data) || data.calculatorInputsEdited is bool)
+        && data.updatedAt is number;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasOnly([
+          'playerName',
+          'playerAge',
+          'playerPosition',
+          'email',
+          'role',
+          'teamId',
+          'teamCode',
+          'teamName',
+          'publicComparisonOptIn',
+          'planTier',
+          'planStatus',
+          'planUpdatedAt',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.playerName is string
+        && request.resource.data.playerName.size() > 0
+        && request.resource.data.playerName.size() <= 120
+        && request.resource.data.role in ['player', 'coach']
+        && (!('planTier' in request.resource.data) || request.resource.data.planTier == 'free')
+        && (!('planStatus' in request.resource.data) || request.resource.data.planStatus == 'active')
+        && validOptionalTimestamp(request.resource.data, 'planUpdatedAt')
+        && (!('publicComparisonOptIn' in request.resource.data) || request.resource.data.publicComparisonOptIn is bool)
+        && validTimestamp(request.resource.data.createdAt)
+        && validOptionalTimestamp(request.resource.data, 'updatedAt')
+        && (request.resource.data.role == 'coach' || (
+          request.resource.data.playerAge is number
+          && request.resource.data.playerAge >= 5
+          && request.resource.data.playerAge <= 80
+        ))
+        && (request.resource.data.role == 'coach' || validPosition(request.resource.data.playerPosition));
+      allow update: if isOwner(userId)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['planTier', 'planStatus', 'planUpdatedAt'])
+        && (!('email' in request.resource.data) || request.resource.data.email == request.auth.token.email)
+        && (!('role' in request.resource.data) || request.resource.data.role in ['player', 'coach'])
+        && (!('playerName' in request.resource.data) || (
+          request.resource.data.playerName is string
+          && request.resource.data.playerName.size() > 0
+          && request.resource.data.playerName.size() <= 120
+        ))
+        && (!('playerAge' in request.resource.data) || validOptionalAge(request.resource.data.playerAge))
+        && (!('playerPosition' in request.resource.data) || request.resource.data.playerPosition == "" || validPosition(request.resource.data.playerPosition))
+        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+        && (!('publicComparisonOptIn' in request.resource.data) || request.resource.data.publicComparisonOptIn is bool)
+        && validOptionalTimestamp(request.resource.data, 'updatedAt')
+        && request.resource.data.keys().hasOnly([
+          'playerName',
+          'playerAge',
+          'playerPosition',
+          'email',
+          'role',
+          'teamId',
+          'teamCode',
+          'teamName',
+          'publicComparisonOptIn',
+          'planTier',
+          'planStatus',
+          'planUpdatedAt',
+          'createdAt',
+          'updatedAt'
+        ]);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['planTier', 'planStatus', 'planUpdatedAt'])
+        && (!('planTier' in request.resource.data) || validPlanTier(request.resource.data.planTier))
+        && (!('planStatus' in request.resource.data) || validPlanStatus(request.resource.data.planStatus))
+        && validOptionalTimestamp(request.resource.data, 'planUpdatedAt');
+      allow update: if signedIn()
+        && !isOwner(userId)
+        && isCoachForTeam(request.resource.data.teamId)
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.playerName == resource.data.playerName
+        && request.resource.data.playerAge == resource.data.playerAge
+        && request.resource.data.playerPosition == resource.data.playerPosition
+        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+        && (!('publicComparisonOptIn' in request.resource.data) || request.resource.data.publicComparisonOptIn is bool)
+        && validOptionalTimestamp(request.resource.data, 'updatedAt')
+        && request.resource.data.keys().hasOnly([
+          'playerName',
+          'playerAge',
+          'playerPosition',
+          'email',
+          'role',
+          'teamId',
+          'teamCode',
+          'teamName',
+          'publicComparisonOptIn',
+          'planTier',
+          'planStatus',
+          'planUpdatedAt',
+          'createdAt',
+          'updatedAt'
+        ])
+        && exists(/databases/$(database)/documents/teamJoinRequests/$(userId))
+        && get(/databases/$(database)/documents/teamJoinRequests/$(userId)).data.teamId == request.resource.data.teamId
+        && get(/databases/$(database)/documents/teamJoinRequests/$(userId)).data.status == 'approved';
+      allow delete: if false;
+    }
+
+    match /ratings/{ratingId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid)
+        || isCoachForTeam(resource.data.teamId);
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && (!('userEmail' in request.resource.data) || request.resource.data.userEmail == request.auth.token.email)
+        && (!('teamId' in request.resource.data) || request.resource.data.teamId == "" || isMemberOfTeam(request.resource.data.teamId))
+        && validRatingData(request.resource.data)
+        && request.resource.data.timestamp is number;
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && (!('userEmail' in request.resource.data) || request.resource.data.userEmail == resource.data.userEmail)
+        && request.resource.data.timestamp == resource.data.timestamp
+        && (!('teamId' in request.resource.data) || request.resource.data.teamId == resource.data.teamId || isMemberOfTeam(request.resource.data.teamId))
+        && validRatingData(request.resource.data);
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /basketballRatings/{ratingId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    match /footballRatings/{ratingId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    match /teams/{teamId} {
+      // Any signed-in user can read teams to look up a team by invite code.
+      // This means all team names, coach names, and team codes are visible to any logged-in user.
+      // Acceptable tradeoff for the invite-code join flow.
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && teamId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'coachId',
+          'coachEmail',
+          'coachName',
+          'teamName',
+          'teamCode',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.coachId == request.auth.uid
+        && request.resource.data.coachEmail == request.auth.token.email
+        && request.resource.data.coachName is string
+        && request.resource.data.coachName.size() > 0
+        && request.resource.data.coachName.size() <= 120
+        && request.resource.data.teamName is string
+        && request.resource.data.teamName.size() > 0
+        && request.resource.data.teamName.size() <= 120
+        && request.resource.data.teamCode is string
+        && request.resource.data.teamCode.size() > 0
+        && request.resource.data.teamCode.size() <= 20
+        && validTimestamp(request.resource.data.createdAt)
+        && validOptionalTimestamp(request.resource.data, 'updatedAt');
+      allow update: if isCoachForTeam(teamId)
+        && request.resource.data.keys().hasOnly([
+          'coachId',
+          'coachEmail',
+          'coachName',
+          'teamName',
+          'teamCode',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.coachId == resource.data.coachId
+        && request.resource.data.coachEmail == resource.data.coachEmail
+        && request.resource.data.coachName is string
+        && request.resource.data.coachName.size() > 0
+        && request.resource.data.coachName.size() <= 120
+        && request.resource.data.teamCode == resource.data.teamCode
+        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+        && request.resource.data.teamName is string
+        && request.resource.data.teamName.size() > 0
+        && request.resource.data.teamName.size() <= 120
+        && validOptionalTimestamp(request.resource.data, 'updatedAt');
+      allow delete: if isCoachForTeam(teamId);
+    }
+
+    match /teamMembers/{memberId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid)
+        || isMemberOfTeam(resource.data.teamId)
+        || isCoachForTeam(resource.data.teamId);
+      allow create: if signedIn()
+        && memberId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'teamId',
+          'teamCode',
+          'teamName',
+          'userId',
+          'playerName',
+          'playerAge',
+          'playerPosition',
+          'email',
+          'joinedAt',
+          'updatedAt'
+        ])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.teamId is string
+        && request.resource.data.teamId.size() > 0
+        && teamExists(request.resource.data.teamId)
+        && request.resource.data.teamCode == teamData(request.resource.data.teamId).teamCode
+        && request.resource.data.teamName == teamData(request.resource.data.teamId).teamName
+        && request.resource.data.playerName is string
+        && request.resource.data.playerName.size() > 0
+        && request.resource.data.playerName.size() <= 120
+        && (request.resource.data.playerAge == null || (
+          request.resource.data.playerAge is number
+          && request.resource.data.playerAge >= 5
+          && request.resource.data.playerAge <= 80
+        ))
+        && validPosition(request.resource.data.playerPosition)
+        && validTimestamp(request.resource.data.joinedAt)
+        && validOptionalTimestamp(request.resource.data, 'updatedAt');
+      allow create: if signedIn()
+        && memberId == request.resource.data.userId
+        && isCoachForTeam(request.resource.data.teamId)
+        && exists(/databases/$(database)/documents/teamJoinRequests/$(memberId))
+        && get(/databases/$(database)/documents/teamJoinRequests/$(memberId)).data.status == 'approved'
+        && get(/databases/$(database)/documents/teamJoinRequests/$(memberId)).data.teamId == request.resource.data.teamId
+        && request.resource.data.keys().hasOnly([
+          'teamId',
+          'teamCode',
+          'teamName',
+          'userId',
+          'playerName',
+          'playerAge',
+          'playerPosition',
+          'email',
+          'joinedAt',
+          'updatedAt'
+        ])
+        && request.resource.data.email == get(/databases/$(database)/documents/teamJoinRequests/$(memberId)).data.email
+        && request.resource.data.teamCode == teamData(request.resource.data.teamId).teamCode
+        && request.resource.data.teamName == teamData(request.resource.data.teamId).teamName
+        && request.resource.data.playerName == get(/databases/$(database)/documents/teamJoinRequests/$(memberId)).data.playerName
+        && request.resource.data.playerAge == get(/databases/$(database)/documents/teamJoinRequests/$(memberId)).data.playerAge
+        && request.resource.data.playerPosition == get(/databases/$(database)/documents/teamJoinRequests/$(memberId)).data.playerPosition
+        && validTimestamp(request.resource.data.joinedAt)
+        && validOptionalTimestamp(request.resource.data, 'updatedAt');
+      allow update: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.userId == request.auth.uid
+          && request.resource.data.keys().hasOnly([
+            'teamId',
+            'teamCode',
+            'teamName',
+            'userId',
+            'playerName',
+            'playerAge',
+            'playerPosition',
+            'email',
+            'joinedAt',
+            'updatedAt'
+          ])
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.teamId == resource.data.teamId
+          && request.resource.data.playerName == resource.data.playerName
+          && request.resource.data.playerAge == resource.data.playerAge
+          && request.resource.data.playerPosition == resource.data.playerPosition
+        )
+        || (
+          isCoachForTeam(resource.data.teamId)
+          && request.resource.data.keys().hasOnly([
+            'teamId',
+            'teamCode',
+            'teamName',
+            'userId',
+            'playerName',
+            'playerAge',
+            'playerPosition',
+            'email',
+            'joinedAt',
+            'updatedAt'
+          ])
+          && request.resource.data.teamId == resource.data.teamId
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.playerName == resource.data.playerName
+          && request.resource.data.playerAge == resource.data.playerAge
+          && request.resource.data.playerPosition == resource.data.playerPosition
+        );
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid)
+        || isCoachForTeam(resource.data.teamId);
+    }
+
+    match /teamJoinRequests/{requestId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid)
+        || isCoachForTeam(resource.data.teamId);
+      allow create: if signedIn()
+        && requestId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'teamId',
+          'teamCode',
+          'teamName',
+          'coachId',
+          'userId',
+          'email',
+          'playerName',
+          'playerAge',
+          'playerPosition',
+          'status',
+          'requestedAt',
+          'updatedAt',
+          'approvedAt',
+          'rejectedAt'
+        ])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.teamId is string
+        && request.resource.data.teamId.size() > 0
+        && teamExists(request.resource.data.teamId)
+        && request.resource.data.coachId == get(/databases/$(database)/documents/teams/$(request.resource.data.teamId)).data.coachId
+        && request.resource.data.teamCode == teamData(request.resource.data.teamId).teamCode
+        && request.resource.data.teamName == teamData(request.resource.data.teamId).teamName
+        && request.resource.data.playerName is string
+        && request.resource.data.playerName.size() > 0
+        && request.resource.data.playerName.size() <= 120
+        && (request.resource.data.playerAge == null || (request.resource.data.playerAge is number && request.resource.data.playerAge >= 5 && request.resource.data.playerAge <= 80))
+        && validPosition(request.resource.data.playerPosition)
+        && request.resource.data.status == 'pending'
+        && validTimestamp(request.resource.data.requestedAt)
+        && validOptionalTimestamp(request.resource.data, 'updatedAt')
+        && validOptionalTimestamp(request.resource.data, 'approvedAt')
+        && validOptionalTimestamp(request.resource.data, 'rejectedAt');
+      allow update: if isCoachForTeam(resource.data.teamId)
+        && request.resource.data.keys().hasOnly([
+          'teamId',
+          'teamCode',
+          'teamName',
+          'coachId',
+          'userId',
+          'email',
+          'playerName',
+          'playerAge',
+          'playerPosition',
+          'status',
+          'requestedAt',
+          'updatedAt',
+          'approvedAt',
+          'rejectedAt'
+        ])
+        && request.resource.data.teamId == resource.data.teamId
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.teamCode == resource.data.teamCode
+        && request.resource.data.teamName == resource.data.teamName
+        && request.resource.data.coachId == resource.data.coachId
+        && request.resource.data.requestedAt == resource.data.requestedAt
+        && request.resource.data.playerName == resource.data.playerName
+        && request.resource.data.playerAge == resource.data.playerAge
+        && request.resource.data.playerPosition == resource.data.playerPosition
+        && request.resource.data.status in ['approved', 'rejected']
+        && validTimestamp(request.resource.data.updatedAt)
+        && validOptionalTimestamp(request.resource.data, 'approvedAt')
+        && validOptionalTimestamp(request.resource.data, 'rejectedAt');
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid)
+        || isCoachForTeam(resource.data.teamId);
+    }
+
+    match /publicPlayerStats/{userId} {
+      allow read: if isOwner(userId) || isAdmin() || resource.data.publicComparisonOptIn == true;
+      allow create, update: if isOwner(userId)
+        && request.resource.data.keys().hasOnly([
+          'userId',
+          'playerName',
+          'playerAge',
+          'position',
+          'gameCount',
+          'averageRating',
+          'publicComparisonOptIn',
+          'featuredGames',
+          'topStrengths',
+          'updatedAt'
+        ])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.playerName is string
+        && request.resource.data.playerName.size() > 0
+        && request.resource.data.playerName.size() <= 120
+        && validOptionalAge(request.resource.data.playerAge)
+        && validPosition(request.resource.data.position)
+        && request.resource.data.gameCount is number
+        && request.resource.data.gameCount >= 0
+        && request.resource.data.averageRating is number
+        && request.resource.data.averageRating >= 0
+        && request.resource.data.averageRating <= 100
+        && (!('publicComparisonOptIn' in request.resource.data) || request.resource.data.publicComparisonOptIn is bool)
+        && (!('featuredGames' in request.resource.data) || (request.resource.data.featuredGames is list && request.resource.data.featuredGames.size() <= 10))
+        && (!('topStrengths' in request.resource.data) || (request.resource.data.topStrengths is list && request.resource.data.topStrengths.size() <= 10))
+        && validTimestamp(request.resource.data.updatedAt);
+      allow delete: if false;
+    }
+
+    // Unauthenticated writes are intentional for anonymous site-event tracking.
+    // Uses validRecentTimestamp (±1 min) to reduce the replay window.
+    match /siteEvents/{eventId} {
+      allow create: if request.resource.data.keys().hasOnly([
+          'type',
+          'email',
+          'playerName',
+          'playerAge',
+          'playerPosition',
+          'guestId',
+          'guestStartedAt',
+          'page',
+          'timezone',
+          'localTime',
+          'timestamp'
+        ])
+        && request.resource.data.type in ['guest', 'signup', 'signin']
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 160
+        && request.resource.data.playerName is string
+        && request.resource.data.playerName.size() <= 120
+        && (request.resource.data.playerAge == null || (
+          request.resource.data.playerAge is number
+          && request.resource.data.playerAge >= 1
+          && request.resource.data.playerAge <= 100
+        ))
+        && request.resource.data.playerPosition is string
+        && request.resource.data.playerPosition.size() <= 40
+        && request.resource.data.guestId is string
+        && request.resource.data.guestId.size() <= 120
+        && request.resource.data.guestStartedAt is string
+        && request.resource.data.guestStartedAt.size() <= 80
+        && request.resource.data.page is string
+        && request.resource.data.page.size() <= 120
+        && request.resource.data.timezone is string
+        && request.resource.data.timezone.size() <= 80
+        && request.resource.data.localTime is string
+        && request.resource.data.localTime.size() <= 120
+        && validRecentTimestamp(request.resource.data.timestamp);
+      allow read, delete: if isAdmin();
+      allow update: if false;
+    }
+
+    // Unauthenticated writes are intentional for anonymous feedback.
+    // Uses validRecentTimestamp (±1 min) to reduce the replay window.
+    match /feedbackMessages/{messageId} {
+      allow create: if request.resource.data.keys().hasOnly([
+          'name',
+          'email',
+          'message',
+          'page',
+          'timestamp'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 160
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 3000
+        && request.resource.data.page is string
+        && request.resource.data.page.size() <= 120
+        && validRecentTimestamp(request.resource.data.timestamp);
+      allow read, delete: if isAdmin();
+      allow update: if false;
+    }
+
+    // Team join requests — players can create their own, coaches can read/update/delete
+    match /teams/{teamId}/requests/{userId} {
+      allow create: if signedIn() && request.auth.uid == userId;
+      allow read, update, delete: if isAdmin()
+        || (signedIn() && get(/databases/$(database)/documents/teams/$(teamId)).data.coachUid == request.auth.uid);
+    }
+
+  }
+}

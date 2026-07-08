@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Veyro app icon">
+  <defs>
+    <linearGradient id="bg" x1="72" y1="52" x2="440" y2="472" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f7df9d"/>
+      <stop offset="0.5" stop-color="#93b889"/>
+      <stop offset="1" stop-color="#183f2f"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#0a261d" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="174" fill="#f8fbf1" filter="url(#shadow)"/>
+  <path d="M256 102 381 194v124L256 410 131 318V194l125-92Z" fill="#183f2f"/>
+  <path d="M256 132 352 203v96l-96 71-96-71v-96l96-71Z" fill="#f8fbf1"/>
+  <path d="M256 176 311 216v80l-55 40-55-40v-80l55-40Z" fill="#183f2f"/>
+  <path d="M185 202 131 194M327 202l54-8M185 310l-54 8M327 310l54 8M256 176v-74M256 336v74" stroke="#f8fbf1" stroke-width="18" stroke-linecap="round"/>
+  <text x="256" y="286" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="72" font-weight="800" fill="#f7df9d">100</text>
+</svg>

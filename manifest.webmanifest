@@ -1,0 +1,39 @@
+{
+  "name": "Veyro",
+  "short_name": "Veyro",
+  "description": "Rate, save, compare, and improve soccer performances.",
+  "start_url": "/",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef4ef",
+  "theme_color": "#183f2f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Calculator",
+      "short_name": "Calc",
+      "description": "Open the live match rating calculator.",
+      "url": "/"
+    },
+    {
+      "name": "Vault",
+      "short_name": "Vault",
+      "description": "Review saved match ratings.",
+      "url": "/vault"
+    },
+    {
+      "name": "Analysis",
+      "short_name": "Analysis",
+      "description": "See trends, strengths, and player comparison.",
+      "url": "/analysis"
+    }
+  ]
+}

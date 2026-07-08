@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="Veyro soccer performance tracker preview">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f8fbf7"/>
+      <stop offset="0.55" stop-color="#dbe8dc"/>
+      <stop offset="1" stop-color="#183f2f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(930 105) rotate(134) scale(360 300)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f4de9d" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#f4de9d" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="22" stdDeviation="18" flood-color="#10291f" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="950" cy="120" r="360" fill="url(#glow)"/>
+  <circle cx="100" cy="560" r="260" fill="#6eb37e" opacity="0.18"/>
+  <rect x="68" y="68" width="1064" height="494" rx="54" fill="#ffffff" opacity="0.78" filter="url(#shadow)"/>
+  <text x="118" y="162" fill="#c28d25" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="900" letter-spacing="6">RATE. REFLECT. IMPROVE.</text>
+  <text x="118" y="260" fill="#183f2f" font-family="Georgia, 'Times New Roman', serif" font-size="86" font-weight="800">Veyro</text>
+  <text x="118" y="325" fill="#2f6b4f" font-family="Segoe UI, Arial, sans-serif" font-size="35" font-weight="800">Soccer match rating calculator and player stats tracker</text>
+  <text x="118" y="388" fill="#61796b" font-family="Segoe UI, Arial, sans-serif" font-size="28">Calculate a live rating out of 100, save full match stats,</text>
+  <text x="118" y="428" fill="#61796b" font-family="Segoe UI, Arial, sans-serif" font-size="28">track graphs, analyze strengths, and compare performances.</text>
+  <g transform="translate(835 167)">
+    <circle cx="130" cy="130" r="118" fill="#183f2f"/>
+    <circle cx="130" cy="130" r="86" fill="#f8fbf7"/>
+    <path d="M130 58 198 106v67l-68 49-68-49v-67l68-48Z" fill="#183f2f"/>
+    <text x="130" y="153" text-anchor="middle" fill="#f4de9d" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-weight="900">100</text>
+  </g>
+  <g transform="translate(118 480)" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="800">
+    <rect x="0" y="0" width="160" height="46" rx="23" fill="#183f2f"/>
+    <text x="80" y="30" text-anchor="middle" fill="#fff">Calculator</text>
+    <rect x="176" y="0" width="104" height="46" rx="23" fill="#2f6b4f"/>
+    <text x="228" y="30" text-anchor="middle" fill="#fff">Vault</text>
+    <rect x="296" y="0" width="118" height="46" rx="23" fill="#d7a544"/>
+    <text x="355" y="30" text-anchor="middle" fill="#183f2f">Graphs</text>
+    <rect x="430" y="0" width="138" height="46" rx="23" fill="#eef4ef"/>
+    <text x="499" y="30" text-anchor="middle" fill="#183f2f">Analysis</text>
+  </g>
+</svg>
