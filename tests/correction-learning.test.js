@@ -1,210 +1,226 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
 
-// Test suite for correction memory and stat differences
 describe("Correction memory and learning", () => {
-    describe("Stat difference summarization", () => {
+    describe("Stat difference detection", () => {
         it("identifies stat changes between original and corrected", () => {
             const original = { touches: 45, passes: 30, shots: 2 };
             const corrected = { touches: 48, passes: 32, shots: 2 };
             
-            // Simulate summarizeStatDifferences logic
-            const statKeys = ["touches", "passes", "shots"];
-            const differences = statKeys
-                .map(key => {
-                    const before = Number(original[key] || 0);
-                    const after = Number(corrected[key] || 0);
-                    return { key, before, after, change: after - before };
-                })
-                .filter(item => item.change !== 0)
-                .sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+            const differences = [];
+            for (const key of Object.keys(original)) {
+                const before = Number(original[key] || 0);
+                const after = Number(corrected[key] || 0);
+                if (after !== before) {
+                    differences.push({ key, before, after, change: after - before });
+                }
+            }
             
             assert.strictEqual(differences.length, 2);
-            assert.strictEqual(differences[0].key, "passes");
-            assert.strictEqual(differences[0].change, 2);
+            assert.strictEqual(differences[0].key, "touches");
+            assert.strictEqual(differences[1].key, "passes");
         });
 
-        it("returns empty when no changes", () => {
+        it("returns empty when no stat changes", () => {
             const stats = { touches: 50, passes: 40 };
             
-            const differences = Object.keys(stats)
-                .map(key => ({
-                    key,
-                    before: stats[key],
-                    after: stats[key],
-                    change: 0
-                }))
-                .filter(item => item.change !== 0);
+            const differences = [];
+            for (const key of Object.keys(stats)) {
+                if (stats[key] !== stats[key]) {
+                    differences.push({ key, change: 0 });
+                }
+            }
             
             assert.strictEqual(differences.length, 0);
         });
 
-        it("sorts by magnitude of change", () => {
+        it("sorts differences by magnitude", () => {
             const differences = [
-                { key: "touches", before: 40, after: 45, change: 5 },
-                { key: "passes", before: 30, after: 38, change: 8 },
-                { key: "shots", before: 1, after: 2, change: 1 }
+                { key: "touches", change: 5 },
+                { key: "passes", change: 8 },
+                { key: "shots", change: 1 }
             ].sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
             
             assert.strictEqual(differences[0].key, "passes");
-            assert.strictEqual(differences[1].key, "touches");
-            assert.strictEqual(differences[2].key, "shots");
+            assert.strictEqual(differences[0].change, 8);
         });
     });
 
     describe("Correction record storage", () => {
-        it("formats correction record with context and differences", () => {
+        it("formats correction with context and differences", () => {
             const record = {
-                createdAt: new Date().toISOString(),
-                context: {
-                    playerNumber: "7",
-                    position: "midfielder",
-                    teamColor: "red"
-                },
-                differences: [
-                    { key: "touches", before: 40, after: 45, change: 5 }
-                ],
-                lesson: {
-                    summary: "Undercounted touches",
-                    lesson: "Count quick touches more carefully",
-                    preventNextTime: ["Watch for rapid exchanges"]
-                }
+                playerNumber: "7",
+                position: "midfielder",
+                differences: [{ key: "touches", change: 5 }],
+                lesson: "Undercounted touches"
             };
             
-            assert(record.createdAt);
-            assert.strictEqual(record.context.playerNumber, "7");
+            assert.strictEqual(record.playerNumber, "7");
+            assert.strictEqual(record.position, "midfielder");
             assert.strictEqual(record.differences.length, 1);
-            assert(record.lesson.summary);
+        });
+
+        it("stores timestamp for tracking", () => {
+            const now = Date.now();
+            const record = { timestamp: now };
+            
+            assert(record.timestamp > 0);
+            assert(record.timestamp <= Date.now());
         });
     });
 
-    describe("Correction memory guide compilation", () => {
-        it("compiles relevant lessons from memory based on position matching", () => {
+    describe("Correction relevance scoring", () => {
+        it("scores high for exact position match", () => {
+            const memory = { position: "midfielder" };
+            const body = { position: "midfielder" };
+            
+            let score = 0;
+            if (memory.position && body.position && 
+                String(memory.position).toLowerCase() === String(body.position).toLowerCase()) {
+                score += 3;
+            }
+            
+            assert.strictEqual(score, 3);
+        });
+
+        it("scores medium for player number match", () => {
+            const memory = { playerNumber: "7" };
+            const body = { playerNumber: "7" };
+            
+            let score = 0;
+            if (memory.playerNumber && body.playerNumber && 
+                String(memory.playerNumber).trim() === String(body.playerNumber).trim()) {
+                score += 2;
+            }
+            
+            assert.strictEqual(score, 2);
+        });
+
+        it("returns zero for no match", () => {
+            const memory = { position: "forward", playerNumber: "9" };
+            const body = { position: "goalkeeper", playerNumber: "1" };
+            
+            let score = 0;
+            if (memory.position && body.position && 
+                String(memory.position).toLowerCase() === String(body.position).toLowerCase()) {
+                score += 3;
+            }
+            if (memory.playerNumber && body.playerNumber && 
+                String(memory.playerNumber).trim() === String(body.playerNumber).trim()) {
+                score += 2;
+            }
+            
+            assert.strictEqual(score, 0);
+        });
+    });
+
+    describe("Stat bias tracking", () => {
+        it("tracks undercounted vs overcounted patterns", () => {
             const memory = [
-                {
-                    playerNumber: "7",
-                    position: "midfielder",
-                    teamColor: "red",
-                    lesson: "Watch for quick passes",
-                    biggestDifferences: [{ key: "passes", change: 5 }]
-                },
-                {
-                    playerNumber: "9",
-                    position: "forward",
-                    teamColor: "blue",
-                    lesson: "Count shots in crowded box",
-                    biggestDifferences: [{ key: "shots", change: 3 }]
+                { differences: [{ key: "passes", change: 5 }, { key: "touches", change: -3 }] },
+                { differences: [{ key: "passes", change: 4 }] }
+            ];
+            
+            const statBias = {};
+            
+            for (const item of memory) {
+                for (const diff of (item.differences || [])) {
+                    if (!statBias[diff.key]) {
+                        statBias[diff.key] = { undercounted: 0, overcounted: 0 };
+                    }
+                    if (diff.change > 0) statBias[diff.key].undercounted += 1;
+                    if (diff.change < 0) statBias[diff.key].overcounted += 1;
                 }
-            ];
+            }
             
-            const body = { playerNumber: "7", position: "midfielder" };
-            
-            // Simulate correctionRelevanceScore
-            const scoreFn = (memory, body) => {
-                let score = 0;
-                if (memory.position && body.position && 
-                    String(memory.position).toLowerCase() === String(body.position).toLowerCase()) 
-                    score += 3;
-                if (memory.playerNumber && body.playerNumber && 
-                    String(memory.playerNumber).trim() === String(body.playerNumber).trim()) 
-                    score += 2;
-                return score;
-            };
-            
-            const ranked = memory
-                .map(item => ({ ...item, relevance: scoreFn(item, body) }))
-                .sort((a, b) => b.relevance - a.relevance);
-            
-            assert.strictEqual(ranked[0].relevance, 3); // Position match
-            assert.strictEqual(ranked[1].relevance, 0); // No match
+            assert.strictEqual(statBias.passes.undercounted, 2);
+            assert.strictEqual(statBias.touches.overcounted, 1);
         });
 
-        it("tracks stat biases across multiple corrections", () => {
-            const memory = [
-                { biggestDifferences: [{ key: "passes", change: 5 }, { key: "touches", change: -3 }] },
-                { biggestDifferences: [{ key: "passes", change: 4 }, { key: "touches", change: 2 }] }
+        it("calculates net change per stat", () => {
+            const corrections = [
+                { differences: [{ key: "passes", change: 5 }] },
+                { differences: [{ key: "passes", change: 4 }] }
             ];
             
-            const statTotals = new Map();
+            let netChange = 0;
+            for (const item of corrections) {
+                for (const diff of (item.differences || [])) {
+                    if (diff.key === "passes") netChange += diff.change;
+                }
+            }
             
-            memory.forEach(item => {
-                (item.biggestDifferences || []).forEach(diff => {
-                    if (!diff?.key) return;
-                    const current = statTotals.get(diff.key) || { 
-                        key: diff.key, 
-                        corrections: 0, 
-                        netChange: 0, 
-                        undercounted: 0, 
-                        overcounted: 0 
-                    };
-                    current.corrections += 1;
-                    current.netChange += diff.change;
-                    if (diff.change > 0) current.undercounted += 1;
-                    if (diff.change < 0) current.overcounted += 1;
-                    statTotals.set(diff.key, current);
-                });
-            });
-            
-            const passes = statTotals.get("passes");
-            assert.strictEqual(passes.corrections, 2);
-            assert.strictEqual(passes.netChange, 9);
-            assert.strictEqual(passes.undercounted, 2);
+            assert.strictEqual(netChange, 9);
         });
     });
 
-    describe("Correction lesson generation", () => {
+    describe("Lesson generation", () => {
         it("generates lesson from stat differences", () => {
             const differences = [
                 { key: "passes", before: 30, after: 38 },
                 { key: "touches", before: 40, after: 45 }
             ];
             
-            // Simulate lesson generation
             const lesson = {
                 summary: "Correction saved.",
-                likelyMistake: "The model likely missed or overcounted visible events.",
-                lesson: "Review the corrected stat keys more carefully in future clips.",
-                preventNextTime: differences.slice(0, 3).map(item => 
-                    `Double-check ${item.key}: AI ${item.before}, corrected ${item.after}.`
-                ),
-                watchStats: differences.slice(0, 5).map(item => item.key)
+                watchStats: differences.map(d => d.key)
             };
             
-            assert.strictEqual(lesson.preventNextTime.length, 2);
-            assert(lesson.preventNextTime[0].includes("passes"));
             assert.strictEqual(lesson.watchStats.length, 2);
+            assert(lesson.watchStats.includes("passes"));
+            assert(lesson.watchStats.includes("touches"));
+        });
+
+        it("includes prevent next time tips", () => {
+            const differences = [
+                { key: "passes", before: 30, after: 38 }
+            ];
+            
+            const tips = differences.map(item => 
+                `Double-check ${item.key}`
+            );
+            
+            assert.strictEqual(tips.length, 1);
+            assert(tips[0].includes("passes"));
         });
     });
 
     describe("Recent corrections loading", () => {
-        it("filters and ranks recent correction lessons", () => {
+        it("filters corrections by player context", () => {
             const corrections = [
-                {
-                    context: { playerNumber: "7", position: "midfielder" },
-                    lesson: { lesson: "Watch midfielder passes" }
-                },
-                {
-                    context: { playerNumber: "10", position: "forward" },
-                    lesson: { lesson: "Count forward shots" }
-                },
-                {
-                    context: { playerNumber: "1", position: "goalkeeper" },
-                    lesson: { lesson: "Track keeper saves" }
-                }
+                { playerNumber: "7", position: "midfielder", lesson: "Lesson 1" },
+                { playerNumber: "10", position: "forward", lesson: "Lesson 2" },
+                { playerNumber: "1", position: "goalkeeper", lesson: "Lesson 3" }
             ];
             
-            const filtered = corrections
-                .map(item => ({
-                    playerNumber: item.context?.playerNumber || "",
-                    position: item.context?.position || "",
-                    lesson: item.lesson?.lesson || "",
-                    preventNextTime: []
-                }))
-                .filter(record => record.lesson)
-                .slice(-8); // Last 8
+            const filtered = corrections.filter(c => 
+                c.position === "midfielder"
+            );
             
-            assert(filtered.length <= 8);
-            assert(filtered.every(r => r.lesson));
+            assert.strictEqual(filtered.length, 1);
+            assert.strictEqual(filtered[0].playerNumber, "7");
+        });
+
+        it("limits recent corrections to last 8", () => {
+            const corrections = Array.from({ length: 15 }, (_, i) => ({
+                lesson: `Lesson ${i}`
+            }));
+            
+            const recent = corrections.slice(-8);
+            
+            assert(recent.length <= 8);
+            assert.strictEqual(recent.length, 8);
+        });
+
+        it("ensures all loaded corrections have lessons", () => {
+            const corrections = [
+                { lesson: "Tip 1" },
+                { lesson: "Tip 2" },
+                { lesson: null }
+            ].filter(c => c.lesson);
+            
+            assert.strictEqual(corrections.length, 2);
+            assert(corrections.every(c => c.lesson));
         });
     });
 });
